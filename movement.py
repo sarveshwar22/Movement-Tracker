@@ -72,3 +72,25 @@ height = video_capture.get(4)
 press_flag = False
 
 cmd = ""
+
+while True:
+    _,img = video_capture.read()
+    img = cv2.flip(img,1)
+    #detect nose and draw
+    img,nose_cords = detect_nose(img,faceCascade)
+    cv2.putText(img,cmd,(10,50),cv2.FONT_HERSHEY_COMPLEX,1,color['red'],1,cv2.LINE_AA)
+
+    #draw boundary circle
+    cords = controller(img,(int(width/2),int(height//2)))
+    if press_flag and len(nose_cords):
+        img,cmd = keyboard_ev(nose_cords,cords,cmd)
+    press_flag,cmd = reset_press_flag(nose_cords,cords,cmd)
+
+    cv2.imshow("face detection",img)
+    if(cv2.waitKey(1) & 0xFF == ord('q')):
+        break
+
+#releasing web_cam
+video_capture.release()
+#Destroying all windows
+cv2.destroyAllWindows()
