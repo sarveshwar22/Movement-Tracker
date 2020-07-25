@@ -21,3 +21,54 @@ def detect_nose(img, faceCascade):
 
     return img, nose_cords
 
+def controller(img,cords):
+    size=40
+    x1 = cords[0]-size
+    y1 = cords[1]-size
+    x2 = cords[0]+size
+    y2 = cords[1]+size
+    cv2.circle(img,cords,size,color['blue'],2)
+    return [(x1,y1),(x2,y2)]
+
+def keyboard_ev(nose_cords,cords,cmd):
+    try:
+        [(x1,y1),(x2,y2)] = cords
+        xc,yc = nose_cords
+    except Exception as e:
+        print(e)
+        return
+    
+    if xc <x1:
+        cmd="left"
+    elif xc>x2:
+        cmd = "right"
+    elif yc<y1:
+        cmd = "up"
+    elif yc>y2:
+        cmd = "down"
+    if cmd:
+        print("The player moved ",cmd,"\n")
+        keyboard.press_and_release(cmd)
+    return img,cmd
+
+def reset_press_flag(nose_cords,cords,cmd):
+    try:
+        [(x1,y1),(x2,y2)] = cords
+        xc,yc = nose_cords
+    except:
+        return True,cmd
+    if x1<xc<x2 and y1<yc<y2:
+        return True,None
+    return False,cmd
+
+#Load classifiers
+faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+#Capturing real time video stream
+video_capture = cv2.VideoCapture(-1)
+
+width = video_capture.get(3)
+height = video_capture.get(4)
+press_flag = False
+
+cmd = ""
