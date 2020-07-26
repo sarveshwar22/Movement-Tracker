@@ -1,5 +1,6 @@
 import cv2
 import keyboard
+import time
 
 color = {"blue":(255,0,0), "red":(0,0,255), "green":(0,255,0),"white":(255,255,255)}
 
@@ -30,37 +31,35 @@ def controller(img,cords):
     cv2.circle(img,cords,size,color['blue'],2)
     return [(x1,y1),(x2,y2)]
 
-def keyboard_ev(nose_cords,cords,cmd):
-    try:
-        [(x1,y1),(x2,y2)] = cords
-        xc,yc = nose_cords
-    except Exception as e:
-        print(e)
-        return
+def get_movement(curr, prev, last_time_update, cmd):
+    if not (len(curr) > 0 and len(prev) > 0):
+        return last_time_update, cmd
+    xc, yc = nose_cords
+    tc = time.time()
+    ox,oy, to = prev_cords
+    diffx = xc - ox
+    diffy = yc - oy
+    thres_diff = 50
     
-    if xc <x1:
-        cmd="left"
-    elif xc>x2:
-        cmd = "right"
-    elif yc<y1:
-        cmd = "up"
-    elif yc>y2:
-        cmd = "down"
-    if cmd:
-        print("The player moved ",cmd,"\n")
+    thres_diff_t = 1
+    if last_time_update + 0.4 > tc:
+        return last_time_update, cmd
+        
+    if (abs(diffx)>thres_diff or abs(diffy) > thres_diff) and abs(tc-to)<thres_diff_t:
+        if abs(diffx) > abs(diffy):
+            if diffx > 0:
+                cmd = "right"
+            else:
+                cmd = "left"
+        else:
+            if diffy > 0:
+                cmd = "down"
+            else:
+                cmd = "up"
+        print("Movement detected: ", cmd, "\n")
         keyboard.press_and_release(cmd)
-    return img,cmd
-
-def reset_press_flag(nose_cords,cords,cmd):
-    try:
-        [(x1,y1),(x2,y2)] = cords
-        xc,yc = nose_cords
-    except:
-        return True,cmd
-    if x1<xc<x2 and y1<yc<y2:
-        return True,None
-    return False,cmd
-
+        last_time_update = time.time()
+    return last_time_update, cmd
 #Load classifiers
 faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
@@ -73,6 +72,9 @@ press_flag = False
 
 cmd = ""
 
+prev_cords = (0,0,  time.time())
+last_time_update = time.time()
+
 while True:
     ret,img = video_capture.read()
     if ret == False:
@@ -82,11 +84,10 @@ while True:
     img,nose_cords = detect_nose(img,faceCascade)
     cv2.putText(img,cmd,(10,50),cv2.FONT_HERSHEY_COMPLEX,1,color['red'],1,cv2.LINE_AA)
 
-    #draw boundary circle
-    cords = controller(img,(int(width/2),int(height//2)))
-    if press_flag and len(nose_cords):
-        img,cmd = keyboard_ev(nose_cords,cords,cmd)
-    press_flag,cmd = reset_press_flag(nose_cords,cords,cmd)
+    last_time_update, cmd = get_movement(nose_cords, prev_cords, last_time_update, cmd)
+    
+    x, y = (0,0) if len(nose_cords) == 0 else nose_cords
+    prev_cords = (x,y,time.time())
 
     cv2.imshow("face detection",img)
     if(cv2.waitKey(1) & 0xFF == ord('q')):
